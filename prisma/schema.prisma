@@ -1,5 +1,5 @@
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../generated/prisma"
 }
 
@@ -7,7 +7,95 @@ datasource db {
   provider = "postgresql"
 }
 
-model Test { 
-  id    Int     @id @default(autoincrement()) 
-  name  String?
+enum Role {
+  PATIENT
+  DOCTOR
+}
+
+enum OnboardingStatus {
+  IN_PROGRESS
+  COMPLETED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  role      Role
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  patient         Patient?
+  doctor          Doctor?
+  onboardingDraft OnboardingDraft?
+
+  sentMessages     Message[] @relation("SentMessages")
+  receivedMessages Message[] @relation("ReceivedMessages")
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  content    String
+  senderId   String
+  sender     User     @relation("SentMessages", fields: [senderId], references: [id])
+  receiverId String
+  receiver   User     @relation("ReceivedMessages", fields: [receiverId], references: [id])
+  createdAt  DateTime @default(now())
+}
+
+model OnboardingDraft {
+  id          String           @id @default(uuid())
+  userId      String           @unique
+  user        User             @relation(fields: [userId], references: [id])
+  step1Data   Json?
+  step2Data   Json?
+  step3Data   Json?
+  currentStep Int              @default(1)
+  status      OnboardingStatus @default(IN_PROGRESS)
+  updatedAt   DateTime         @updatedAt
+}
+
+model Patient {
+  id                    String   @id @default(uuid())
+  userId                String   @unique
+  user                  User     @relation(fields: [userId], references: [id])
+  assignedDoctorId      String?
+  assignedDoctor        Doctor?  @relation("DoctorPatients", fields: [assignedDoctorId], references: [id])
+
+  fullName              String
+  dob                   DateTime
+  gender                String
+  phone                 String
+  emergencyContactName  String
+  emergencyContactPhone String
+  
+  bloodType             String
+  currentMedications    String?
+  knownAllergies        String[]
+  chronicConditions     String[]
+  previousSurgeries     String?
+  familyMedicalHistory  String?
+
+  insuranceProvider     String
+  insuranceId           String
+  policyHolderName      String
+  preferredTimeSlot     String
+  referralSource        String
+  additionalNotes       String?
+
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+}
+
+model Doctor {
+  id             String    @id @default(uuid())
+  userId         String    @unique
+  user           User      @relation(fields: [userId], references: [id])
+  specialization String?
+  bio            String?
+  
+  assignedPatients Patient[] @relation("DoctorPatients")
+
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
